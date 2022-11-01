@@ -1,0 +1,22 @@
+{
+  "name": "automate-download-paycheck",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "Raz Luvaton",
+  "license": "MIT",
+  "dependencies": {
+    "command-exists": "^1.2.9",
+    "dotenv": "^16.0.0",
+    "is-pdf-valid": "0.0.1",
+    "nodemailer": "^6.7.5",
+    "pino": "^7.11.0",
+    "pino-pretty": "^7.6.1",
+    "pretty-ms": "^7.0.1",
+    "puppeteer": "^13.5.0"
+  }
+}
