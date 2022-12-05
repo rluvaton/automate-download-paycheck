@@ -1,6 +1,6 @@
 const pdfService = require('./pdf-service');
 const { baseLogger } = require('./logger');
-const { paycheck, pdf, hilan, harGal, browserConf } = require('./conf');
+const { paycheck, pdf, hilan, harGal, browser: browserConf } = require('./conf');
 const { downloadPaycheckFor: downloadPaycheckForHarGal } = require('./har-gal');
 const { downloadPaycheckFor: downloadPaycheckForHilan } = require('./hilan');
 const { makeSureEmptyDirectory } = require('./fs-utils');
@@ -108,7 +108,7 @@ async function run() {
       try {
         await downloadFromHilan(browser, paycheckDate);
       } catch (e) {
-        baseLogger.error('Failed to download from Hilan', e);
+        baseLogger.error(e, 'Failed to download from Hilan');
       }
     });
 
@@ -116,7 +116,7 @@ async function run() {
       try {
         await downloadFromHargal(browser, paycheckDate);
       } catch (e) {
-        baseLogger.error('Failed to download from Har gal', e);
+        baseLogger.error(e, 'Failed to download from Har gal');
       }
     });
   } finally {

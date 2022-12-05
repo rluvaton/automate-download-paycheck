@@ -1,12 +1,12 @@
-const { baseLogger } = require('./logger');
-const path = require('path');
+const { baseLogger } = require("./logger");
+const path = require("path");
 
 /**
  * @typedef {import('puppeteer').Browser} Browser
  * @typedef {import('puppeteer').Page} Page
  */
 
-const logger = baseLogger.child({ name: 'puppeteer-utils' });
+const logger = baseLogger.child({ name: "puppeteer-utils" });
 
 /**
  * Get first page (or create one if none)
@@ -31,8 +31,11 @@ async function getFirstPage(browser) {
  */
 async function setupDownloadLocation(page, absoluteLocation) {
   if (!path.isAbsolute(absoluteLocation)) {
-    logger.error({ path: absoluteLocation }, 'setupDownloadLocation path must be absolute');
-    throw new Error('path must be absolute');
+    logger.error(
+      { path: absoluteLocation },
+      "setupDownloadLocation path must be absolute",
+    );
+    throw new Error("path must be absolute");
   }
 
   // BEWARE - THIS CAN BREAK, `Browser.setDownloadBehavior` is experimental
@@ -41,7 +44,7 @@ async function setupDownloadLocation(page, absoluteLocation) {
   await page._client.send("Browser.setDownloadBehavior", {
     behavior: "allow",
     downloadPath: absoluteLocation,
-  })
+  });
 }
 
 /**
@@ -52,10 +55,18 @@ async function setupDownloadLocation(page, absoluteLocation) {
  * @param {(value: any, text: string) => T} parseFn
  * @return {Promise<{selected: {index: number, value: any, text: string, parsed: T}[], options: {value: any, text: string, parsed: T}[]}>}
  */
-async function getOptionsAndSelected(page, selectEl, parseFn = () => undefined) {
-  const optionsAndSelected = await page.evaluate(el => {
+async function getOptionsAndSelected(
+  page,
+  selectEl,
+  parseFn = () => undefined,
+) {
+  if (typeof selectEl === 'string') {
+    selectEl = await page.$(selectEl);
+  }
+
+  const optionsAndSelected = await page.evaluate((el) => {
     return {
-      selected: Array.from(el.selectedOptions).map(selectedOption => ({
+      selected: Array.from(el.selectedOptions).map((selectedOption) => ({
         index: selectedOption.index,
         value: selectedOption.value,
         text: selectedOption.innerText.trim(),
@@ -67,18 +78,24 @@ async function getOptionsAndSelected(page, selectEl, parseFn = () => undefined) 
     };
   }, selectEl);
 
-  optionsAndSelected.selected.forEach(item => {
+  optionsAndSelected.selected.forEach((item) => {
     item.parsed = parseFn(item.value, item.text);
   });
 
-  optionsAndSelected.options.forEach(item => {
+  optionsAndSelected.options.forEach((item) => {
     item.parsed = parseFn(item.value, item.text);
   });
 
   return optionsAndSelected;
 }
 
-async function selectValue(page, selector, value, validateSelected = (currentlySelectedValue, value) => currentlySelectedValue.includes(value)) {
+async function selectValue(
+  page,
+  selector,
+  value,
+  validateSelected = (currentlySelectedValue, value) =>
+    currentlySelectedValue.includes(value),
+) {
   // TODO - NOT SELECTING OPTION
   await page.select(selector, value);
 
@@ -89,11 +106,17 @@ async function selectValue(page, selector, value, validateSelected = (currentlyS
    *
    * @type {any[]}
    */
-  const currentlySelectedValue = await page.evaluate(el => Array.from(el.selectedOptions).map(option => option.value), selectEl);
+  const currentlySelectedValue = await page.evaluate(
+    (el) => Array.from(el.selectedOptions).map((option) => option.value),
+    selectEl,
+  );
 
   if (!validateSelected(currentlySelectedValue, value)) {
-    logger.error({ selector, value, currentlySelectedValue }, 'selected value did not changed');
-    throw new Error('not selected ' + value)
+    logger.error(
+      { selector, value, currentlySelectedValue },
+      "selected value did not changed",
+    );
+    throw new Error("not selected " + value);
   }
 }
 
@@ -106,7 +129,12 @@ async function isVisible(page, selector) {
 
     const style = window.getComputedStyle(e);
 
-    return style && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    return (
+      style &&
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      style.opacity !== "0"
+    );
   }, selector);
 }
 
@@ -116,4 +144,4 @@ module.exports = {
   getOptionsAndSelected,
   selectValue,
   isVisible,
-}
+};
