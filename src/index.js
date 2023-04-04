@@ -120,7 +120,7 @@ async function run() {
       }
     });
   } finally {
-    await browser.close();
+    await browser?.close();
   }
 }
 
