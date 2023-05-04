@@ -125,7 +125,11 @@ async function navigateToPaycheckByDate(page, date) {
   await page.focus('body');
 
   // This should resolve after finish to try to fetch the PDF
-  await page.waitForNetworkIdle();
+  try {
+    await page.waitForNetworkIdle();
+  } catch (e) {
+    logger.error({ date }, 'still waiting for the PDF to be available, it is maybe already available ');
+  }
 }
 
 /**
