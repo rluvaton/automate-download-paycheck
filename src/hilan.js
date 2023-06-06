@@ -124,6 +124,11 @@ async function navigateToPaycheckByDate(page, date) {
   // Need to focus somewhere else so the selection will take effect
   await page.focus('body');
 
+
+  const showPaycheckBtnSelector = '.payslip .data-hidden';
+  await page.waitForSelector(showPaycheckBtnSelector);
+  await page.click(showPaycheckBtnSelector);
+
   // This should resolve after finish to try to fetch the PDF
   try {
     await page.waitForNetworkIdle();
@@ -152,6 +157,8 @@ async function _downloadPaycheckFor({ browser, date, folderToDownloadPaycheckTo 
 
   await openPaycheckPage(page);
   await navigateToPaycheckByDate(page, date);
+
+
 
   // TODO - debugging
   if (!await isPaycheckAvailable(page, date)) {
