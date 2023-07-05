@@ -1,5 +1,5 @@
-const pdfService = require('./pdf-service');
 const { baseLogger } = require('./logger');
+const pdfService = require('./pdf-service');
 const { paycheck, pdf, hilan, harGal, browser: browserConf } = require('./conf');
 const { downloadPaycheckFor: downloadPaycheckForHarGal } = require('./har-gal');
 const { downloadPaycheckFor: downloadPaycheckForHilan } = require('./hilan');
@@ -83,11 +83,10 @@ async function downloadFromHargal(browser, paycheckDate) {
 }
 
 async function run() {
-
   try {
     await pdfService.assertAvailable();
   } catch (e) {
-    baseLogger.error('existing...')
+    baseLogger.error(e, 'existing...')
     return;
   }
 

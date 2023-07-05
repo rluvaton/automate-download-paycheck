@@ -2,7 +2,7 @@ const fs = require('fs/promises');
 const isPDF = require('is-pdf-valid');
 const commandExists = require('command-exists');
 const { spawn } = require('child_process');
-const { logger } = require('./logger');
+const { baseLogger } = require('./logger');
 
 /**
  *
@@ -60,11 +60,11 @@ async function removePdfFileEncryption(path, password) {
     qpdfConvertFileChildProcess.stdin.end(password);
   })
     .catch((error) => {
-      logger.error(error, 'Error from qpdf process');
+      baseLogger.error(error, 'Error from qpdf process');
 
       // Kill process if still running
       if (qpdfConvertFileChildProcess.exitCode === null) {
-        logger.error('qpdf process still running after error, killing it...');
+        baseLogger.error('qpdf process still running after error, killing it...');
         qpdfConvertFileChildProcess.kill();
       }
 
@@ -77,7 +77,7 @@ async function assertAvailable() {
     await commandExists('qpdf');
   } catch (error) {
 
-    logger.error(error, `\`qpdf\` does not exist.
+    baseLogger.error(error, `\`qpdf\` does not exist.
 Possible reasons:
   1. Not installed (try running \`apt install qpdf\` or \`brew install qpdf\`)
   2. Not in PATH`);
