@@ -16,10 +16,11 @@ const { MissingPaycheckError } = require('./errors/missing-paycheck.error');
 const logger = baseLogger.child({ name: 'har-gal' });
 
 async function moveToIdAndPasswordLoginPage(page) {
-  const text = 'כניסה באמצעות ת.ז. וסיסמה';
-  const [a] = await page.$x(`//a[contains(., '${text}')]`);
-
-  a?.click();
+  await page.evaluate(() => {
+    Array.from(document.querySelectorAll('[role=tab]'))
+        .find(element => element.innerText?.trim() === 'סיסמא')
+        .click();
+  });
 
   await page.waitForFunction(
     () => document.querySelector('#lfPassword').placeholder?.trim() === 'סיסמה',
