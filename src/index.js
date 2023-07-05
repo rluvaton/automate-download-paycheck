@@ -17,7 +17,7 @@ async function wrapDownloadWithSetupAndCleanup(fn) {
   await fn()
 
   baseLogger.info('Cleaning temporary directory');
-  await fs.rmdir(paycheck.folder, { recursive: true });
+  await fs.rm(paycheck.folder, { recursive: true });
 }
 /**
  * Download from hilan

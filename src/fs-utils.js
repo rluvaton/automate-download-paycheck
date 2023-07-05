@@ -48,7 +48,7 @@ async function makeSureEmptyDirectory(path) {
 
   logger.warn({ ...logObj, filesInDir }, 'Removing non-empty directory')
 
-  await fs.rmdir(path, { recursive: true });
+  await fs.rm(path, { recursive: true });
 
   await fs.mkdir(path);
 }
