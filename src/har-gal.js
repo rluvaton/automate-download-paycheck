@@ -147,6 +147,7 @@ async function _downloadPaycheckFor({ browser, date, folderToDownloadPaycheckTo 
   await openPaycheckPage(page);
   await navigateToPaycheckByDate(page, date);
 
+  await sleep(1000);
   // TODO - debugging
   if (!await isPaycheckAvailable(page, date)) {
     throw new MissingPaycheckError(date);

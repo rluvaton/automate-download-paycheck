@@ -105,19 +105,21 @@ async function run() {
   try {
     await wrapDownloadWithSetupAndCleanup(async () => {
       try {
+        await downloadFromHargal(browser, paycheckDate);
+      } catch (e) {
+        baseLogger.error(e, 'Failed to download from Har gal');
+      }
+    });
+
+
+    await wrapDownloadWithSetupAndCleanup(async () => {
+      try {
         await downloadFromHilan(browser, paycheckDate);
       } catch (e) {
         baseLogger.error(e, 'Failed to download from Hilan');
       }
     });
 
-    await wrapDownloadWithSetupAndCleanup(async () => {
-      try {
-        await downloadFromHargal(browser, paycheckDate);
-      } catch (e) {
-        baseLogger.error(e, 'Failed to download from Har gal');
-      }
-    });
   } finally {
     await browser?.close();
   }
