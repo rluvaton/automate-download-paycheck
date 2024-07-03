@@ -7,20 +7,9 @@ const { baseLogger } = require('./logger');
 /**
  *
  * @param {string} path
- * @return {Promise<boolean>} validation result of path
- */
-async function isValidPdfFile(path) {
-  const pdfFileBuffer = await fs.readFile(path);
-
-  return isPDF(pdfFileBuffer);
-}
-
-/**
- *
- * @param {string} path
  * @param {string} password
  */
-async function removePdfFileEncryption(path, password) {
+export async function removePdfFileEncryption(path, password) {
   const qpdfConvertFileChildProcess = spawn(
     'qpdf',
     [
@@ -42,7 +31,7 @@ async function removePdfFileEncryption(path, password) {
   qpdfConvertFileChildProcess.stdout.pipe(process.stdout);
   qpdfConvertFileChildProcess.stderr.pipe(process.stderr);
 
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     qpdfConvertFileChildProcess.on('exit', (code) => {
       if (code === 0) {
         return resolve();
@@ -72,7 +61,7 @@ async function removePdfFileEncryption(path, password) {
     });
 }
 
-async function assertAvailable() {
+export async function assertAvailable() {
   try {
     await commandExists('qpdf');
   } catch (error) {
@@ -86,9 +75,3 @@ Possible reasons:
   }
 }
 
-
-module.exports = {
-  isValidPdfFile,
-  assertAvailable,
-  removePdfFileEncryption,
-}

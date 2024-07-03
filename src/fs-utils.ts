@@ -1,16 +1,14 @@
-const fs = require('fs/promises');
-const { baseLogger } = require('./logger');
+import * as fs from "node:fs/promises";
+import {baseLogger} from "./logger";
 
 
-const logger = baseLogger.child({ name: 'fs-utils' });
+const logger = baseLogger.child({name: 'fs-utils'});
 
 /**
  * Making sure a path is an empty directory, if not exist than create and if not empty then clean all files
- * @param path
- * @return {Promise<void>}
  */
-async function makeSureEmptyDirectory(path) {
-  const logObj = { path };
+export async function makeSureEmptyDirectory(path: string): Promise<void> {
+  const logObj = {path};
   logger.debug(logObj, 'creating / emptying directory %s');
 
   try {
@@ -24,7 +22,7 @@ async function makeSureEmptyDirectory(path) {
     try {
       await fs.mkdir(path);
     } catch (error) {
-      logger.debug({ ...logObj, error: error }, 'Failed to create directory');
+      logger.debug({...logObj, error: error}, 'Failed to create directory');
 
       throw error;
     }
@@ -46,11 +44,10 @@ async function makeSureEmptyDirectory(path) {
     return;
   }
 
-  logger.warn({ ...logObj, filesInDir }, 'Removing non-empty directory')
+  logger.warn({...logObj, filesInDir}, 'Removing non-empty directory')
 
-  await fs.rm(path, { recursive: true });
+  await fs.rm(path, {recursive: true});
 
   await fs.mkdir(path);
 }
 
-module.exports = { makeSureEmptyDirectory }

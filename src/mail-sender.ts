@@ -1,14 +1,17 @@
-const nodemailer = require('nodemailer');
-const { mail } = require('./conf');
-const { baseLogger } = require('./logger');
+import * as nodemailer from "nodemailer";
+import {mail} from "./conf";
+import {baseLogger} from "./logger";
+import {Logger} from "pino";
+
 
 const transporter = nodemailer.createTransport({
+  // @ts-expect-error - fix this type
   service: 'gmail',
   auth: {
     user: mail.USERNAME + '@' + mail.DOMAIN,
     pass: mail.PASSWORD,
   },
-  logger: baseLogger.child({ name: 'nodemailer' }),
+  logger: baseLogger.child({name: 'nodemailer'}),
 });
 
 function getRecipientAddress(username, domain, companyName, workerName) {
@@ -41,15 +44,7 @@ function getPaycheckSubjectAndBody(company, date, workerName) {
   }
 }
 
-/**
- *
- * @param {string} companyName
- * @param {string} workerName
- * @param {Date} date
- * @param {string} paycheckPath
- * @returns {Promise<void>}
- */
-async function sendMail(companyName, workerName, date, paycheckPath, logger) {
+export async function sendMail(companyName: string, workerName: string, date: Date, paycheckPath: string, logger: Logger) {
   // TODO - CHECK IF PAYCHECK PATH EXIST
 
   const mailOptions = {
@@ -70,7 +65,7 @@ async function sendMail(companyName, workerName, date, paycheckPath, logger) {
   try {
     const mailInfo = await transporter.sendMail(mailOptions);
 
-    logger.debug({ mailInfo, mailOptions }, `Mail sent from ${mailOptions.from} to ${mailOptions.to}`);
+    logger.debug({mailInfo, mailOptions}, `Mail sent from ${mailOptions.from} to ${mailOptions.to}`);
   } catch (error) {
     logger.error(error, 'Failed to send mail');
 
@@ -81,7 +76,3 @@ async function sendMail(companyName, workerName, date, paycheckPath, logger) {
   }
 }
 
-
-module.exports = {
-  sendMail,
-};
