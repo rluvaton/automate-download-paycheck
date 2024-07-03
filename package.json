@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "ts-node src/index.ts"
   },
   "keywords": [],
   "author": "Raz Luvaton",
@@ -18,5 +18,12 @@
     "pino-pretty": "^7.6.1",
     "pretty-ms": "^7.0.1",
     "puppeteer": "^13.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.1",
+    "@types/node": "^20.14.9",
+    "@types/nodemailer": "^4.6.8",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
   }
 }

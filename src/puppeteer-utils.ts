@@ -1,5 +1,8 @@
-const { baseLogger } = require("./logger");
-const path = require("path");
+// @ts-nocheck
+import {baseLogger} from "./logger";
+
+import path from "path";
+import {ElementHandle, Page} from "puppeteer";
 
 /**
  * @typedef {import('puppeteer').Browser} Browser
@@ -13,7 +16,7 @@ const logger = baseLogger.child({ name: "puppeteer-utils" });
  * @param {Browser} browser
  * @return {Promise<Page>}
  */
-async function getFirstPage(browser) {
+export async function getFirstPage(browser) {
   const pages = await browser.pages();
 
   if (pages.length > 0) {
@@ -29,7 +32,7 @@ async function getFirstPage(browser) {
  * @param {string} absoluteLocation Absolute path
  * @return {Promise<void>}
  */
-async function setupDownloadLocation(page, absoluteLocation) {
+export async function setupDownloadLocation(page, absoluteLocation) {
   if (!path.isAbsolute(absoluteLocation)) {
     logger.error(
       { path: absoluteLocation },
@@ -53,22 +56,37 @@ async function setupDownloadLocation(page, absoluteLocation) {
  * @param {Page} page
  * @param {ElementHandle<Element>} selectEl
  * @param {(value: any, text: string) => T} parseFn
- * @return {Promise<{selected: {index: number, value: any, text: string, parsed: T}[], options: {value: any, text: string, parsed: T}[]}>}
  */
-async function getOptionsAndSelected(
-  page,
+export async function getOptionsAndSelected<T>(
+  page: Page,
   selectEl,
-  parseFn = () => undefined,
+  parseFn: (value: any, text: string) => T | undefined = () => undefined,
 ) {
   if (typeof selectEl === 'string') {
-    selectEl = await page.$(selectEl);
+    selectEl = await page.$(selectEl)!;
   }
 
-  const optionsAndSelected = await page.evaluate((el) => {
+  const optionsAndSelected: {
+    selected: {
+      index: number,
+        value: string,
+        text: string,
+        parsed: T | undefined,
+    }[],
+
+    options: {
+      value: string,
+      text: string,
+      parsed: T | undefined,
+    }[]
+  } = await page.evaluate((el) => {
     return {
       selected: Array.from(el.selectedOptions).map((selectedOption) => ({
+        // @ts-expect-error
         index: selectedOption.index,
+        // @ts-expect-error
         value: selectedOption.value,
+        // @ts-expect-error
         text: selectedOption.innerText.trim(),
       })),
       options: Array.from(el.options).map((option) => ({
@@ -89,7 +107,7 @@ async function getOptionsAndSelected(
   return optionsAndSelected;
 }
 
-async function selectValue(
+export async function selectValue(
   page,
   selector,
   value,
@@ -120,7 +138,7 @@ async function selectValue(
   }
 }
 
-async function isVisible(page, selector) {
+export async function isVisible(page, selector) {
   return await page.evaluate((selector) => {
     const e = document.querySelector(selector);
     if (!e) {
@@ -137,11 +155,3 @@ async function isVisible(page, selector) {
     );
   }, selector);
 }
-
-module.exports = {
-  getFirstPage,
-  setupDownloadLocation,
-  getOptionsAndSelected,
-  selectValue,
-  isVisible,
-};
