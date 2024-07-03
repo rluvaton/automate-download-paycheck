@@ -7,17 +7,6 @@ const { baseLogger } = require('./logger');
 /**
  *
  * @param {string} path
- * @return {Promise<boolean>} validation result of path
- */
-export async function isValidPdfFile(path) {
-  const pdfFileBuffer = await fs.readFile(path);
-
-  return isPDF(pdfFileBuffer);
-}
-
-/**
- *
- * @param {string} path
  * @param {string} password
  */
 export async function removePdfFileEncryption(path, password) {
