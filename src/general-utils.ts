@@ -1,16 +1,6 @@
-const prettyMilliseconds = require('pretty-ms');
+import prettyMilliseconds from "pretty-ms";
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * @param {number} startTimeInMs
- * @return {string}
- */
-function getDuration(startTimeInMs) {
+export function getDuration(startTimeInMs: number): string {
   return prettyMilliseconds(Date.now() - startTimeInMs);
 }
 
-module.exports = {
-  sleep,
-  getDuration
-}

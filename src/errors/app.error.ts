@@ -1,13 +1,10 @@
-class AppError extends Error {
+export class AppError extends Error {
   isTrustedError = true
 
-  constructor(message, isTrustedError) {
+  constructor(message: string, isTrustedError: boolean) {
     super(message);
 
     this.isTrustedError = isTrustedError;
   }
 }
 
-module.exports = {
-  AppError,
-};

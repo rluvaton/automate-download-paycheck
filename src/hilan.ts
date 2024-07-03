@@ -1,222 +1,153 @@
-const fs = require('fs/promises');
-const path = require('path');
-const { baseLogger } = require('./logger');
-const {
-  setupDownloadLocation,
-  getFirstPage,
-  getOptionsAndSelected,
-  selectValue,
-} = require('./puppeteer-utils');
-const { hilan } = require('./conf');
-const { sleep } = require('./general-utils');
-const { isValidPdfFile } = require('./pdf-service');
-const { MissingPaycheckError } = require('./errors/missing-paycheck.error');
+import {Page} from 'playwright';
+import {baseLogger} from "./logger";
+import * as path from "node:path";
+import {hilan} from "./conf";
+import {MissingPaycheckError} from "./errors/missing-paycheck.error";
 
-const logger = baseLogger.child({ name: 'hilan' });
 
-const BASE_URL = hilan.baseUrl;
+const logger = baseLogger.child({name: 'har-gal'});
 
-async function getLoginBtn(page) {
-  const selector = 'button[type="submit"]';
-  await page.waitForSelector(selector);
+export async function downloadPaycheckFromHilan({page, date, downloadFolder}: {
+    page: Page,
+    date: Date,
+    downloadFolder: string
+}) {
+    const downloadFilePath = path.join(downloadFolder, `hilan-${date.getFullYear()}-${date.getMonth() + 1}.pdf`);
 
-  const loginBtn = await page.$(selector);
-  const loginBtnText = await loginBtn.evaluate(el => el.textContent);
+    logger.info('Opening login page');
+    await page.goto(`${hilan.baseUrl}/login`);
+    logger.info('login page opened');
 
-  if (!loginBtnText.includes('כניסה')) {
-    throw new Error('login button is missing');
-  }
+    await login({
+        page,
+        username: hilan.USERNAME,
+        password: hilan.PASSWORD,
+    });
 
-  return selector;
+    await goToPaychecks({
+        page
+    });
+
+    await goToPaycheckDate({page, year: date.getFullYear(), month: date.getMonth()});
+
+    await downloadPaycheck({page, downloadPath: downloadFilePath});
+
+    return downloadFilePath;
 }
 
-async function login(page, username, password) {
-  const userIdInputSelector = '#user_nm'
-  await page.waitForSelector(userIdInputSelector);
+async function login({page, username, password}: { page: Page, username: string, password: string }) {
+    logger.info('Log in');
 
-  await page.type(userIdInputSelector, username, { delay: 100 });
-  await page.type('#password_nm', password, { delay: 100 });
+    await page.getByPlaceholder('מספר העובד').fill(username);
 
-  const loginBtn = await getLoginBtn(page)
+    await page.getByPlaceholder('סיסמה').fill(password);
 
-  await page.click(loginBtn);
+    await page.getByRole('button', {name: 'כניסה'}).click();
 
-  // Wait for the login to complete
-  await page.waitForNavigation({ waitUntil: 'networkidle2' })
+    // Waiting for the page to finish login
+    await page.waitForLoadState('networkidle');
 
-  // Wait for paycheck text to appear which means that we logged in
-  // await page.waitForFunction(
-  //   () => Array.from(document.querySelectorAll('div.name'))
-  //     .some(element => element.innerText?.trim() === 'תלושי שכר'),
-  // );
+    logger.info('Logged in');
 }
 
-async function openPaycheckPage(page) {
-  await page.goto(`${BASE_URL}/Hilannetv2/ng/personal-file/payslip`);
-  // await page.evaluate(() => {
-  //   Array.from(document.querySelectorAll('div.name')).find(element => element.innerText?.trim() === 'תלושי שכר').click();
-  // });
+async function goToPaychecks({page}: { page: Page }) {
+    logger.info('Navigating to paychecks page');
+
+    await page.goto(`${hilan.baseUrl}/Hilannetv2/ng/personal-file/payslip`);
+
+    logger.info('Paychecks page opened');
 }
 
-async function downloadPaycheck(page) {
-  await page.waitForSelector('button[name="DownloadPaySlip"]');
+async function goToPaycheckDate({page, year, month}: { page: Page, year: number, month: number }) {
+    logger.info('Selecting the requested paycheck date');
 
-  await page.click('button[name="DownloadPaySlip"]');
+    // Waiting for the date list select to be visible
+    await page.locator('select').waitFor({state: 'visible'});
 
-  // Select without password
-  await page.waitForSelector('#noEncryption');
-  await page.click('#noEncryption');
+    const selectedValue = await page.evaluate(() => {
+        const datesList = document.querySelector('select');
 
-  await page.evaluate(() => {
-    const downloadBtnText = 'הורדת קובץ';
-    Array.from(document.querySelectorAll('button')).find(element => element.innerText?.trim().includes(downloadBtnText)).click();
-  });
-}
+        if (!datesList) {
+            return;
+        }
 
-/**
- *
- * @param {Date} date1
- * @param {Date} date2
- */
-function isDatesEqualByYearAndMonth(date1, date2) {
-  return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
-}
+        const selected = datesList.selectedIndex;
 
-function parseValue(value) {
-  const date = value.split(':')[1].trim();
-  const [month, year] = date.split('/').map(num => parseInt(num, 10));
+        if (selected == null) {
+            return;
+        }
 
-  return new Date(year, month - 1);
-}
+        return datesList.options[selected].value;
+    });
 
-/**
- *
- * @param {puppeteer.Page} page
- * @param {Date} date
- * @return {Promise<void>}
- */
-async function navigateToPaycheckByDate(page, date) {
-  // Only one
-  const dateSelector = 'select'
+    let shouldSelectOption = true;
 
-  const dateEl = await page.waitForSelector(dateSelector);
-
-  // Wait for element to be selected
-  await sleep(1000);
-
-  const selectedDateSelection = await getOptionsAndSelected(page, dateEl, (value) => parseValue(value));
-
-  // If date not selected
-  if (selectedDateSelection.selected.every((selected) => !isDatesEqualByYearAndMonth(date, selected.parsed))) {
-    const dateOption = selectedDateSelection.options.find((option) => isDatesEqualByYearAndMonth(date, option.parsed));
-
-    if (!dateOption) {
-      logger.error({
-        selectedDateSelection,
-        date,
-      }, 'there is no option with the requested year and month in the paycheck page');
-      throw new Error(`Year and month is missing in the paycheck page`);
+    if (selectedValue && doesValueMatchDate({value: selectedValue, year, month})) {
+        logger.info('Requested paycheck date already selected');
+        shouldSelectOption = false;
     }
 
-    await selectValue(page, dateSelector, dateOption.value, (currentlySelectedValue, value) => currentlySelectedValue.every(item => isDatesEqualByYearAndMonth(parseValue(item), parseValue(value))));
-  }
-
-  // Need to focus somewhere else so the selection will take effect
-  await page.focus('body');
-
-
-  const showPaycheckBtnSelector = '.payslip .data-hidden';
-  await page.waitForSelector(showPaycheckBtnSelector);
-  await page.click(showPaycheckBtnSelector);
-
-  // This should resolve after finish to try to fetch the PDF
-  try {
-    await page.waitForNetworkIdle();
-  } catch (e) {
-    logger.error({ date }, 'still waiting for the PDF to be available, it is maybe already available ');
-  }
-}
-
-/**
- *
- * @param {puppeteer.Page} page
- * @param {Date} date
- * @return {Promise<boolean>}
- */
-async function isPaycheckAvailable(page, date) {
-  return !!(await page.$('button[name="DownloadPaySlip"]'));
-}
-
-async function _downloadPaycheckFor({ browser, date, folderToDownloadPaycheckTo }) {
-  const page = await getFirstPage(browser)
-
-  await page.goto(`${BASE_URL}/login`);
-
-  await setupDownloadLocation(page, folderToDownloadPaycheckTo);
-  await login(page, hilan.USERNAME, hilan.PASSWORD);
-
-  await openPaycheckPage(page);
-  await navigateToPaycheckByDate(page, date);
-
-
-
-  // TODO - debugging
-  if (!await isPaycheckAvailable(page, date)) {
-    throw new MissingPaycheckError(date);
-  }
-
-  logger.info({ month: date.getMonth() + 1, year: date.getFullYear() }, 'Paycheck is available ✅');
-
-  await downloadPaycheck(page);
-
-  // TODO - wait for download to finish
-  await sleep(10_000);
-
-  const paycheckFolder = await fs.readdir(folderToDownloadPaycheckTo);
-
-  for (const fileName of paycheckFolder) {
-    let filePath = path.join(folderToDownloadPaycheckTo, fileName);
-    if (await isValidPdfFile(filePath)) {
-      return filePath;
+    if (shouldSelectOption) {
+        await selectDate({page, year, month});
     }
-  }
 
-  logger.error({ paycheckFolder, folderToDownloadPaycheckTo }, 'No valid paycheck PDF file in folder');
-  throw new Error('No valid paycheck PDF file in folder');
+    const networkIdle = page.waitForLoadState('networkidle');
 
-  // TODO:
-  //  - [x] Go to the check in the current month and year
-  //  - [ ] If check is missing (email/telegram message) that no check found
-  //  - [ ] report job as failed
-  //  - [ ] requeue job in few days
-  //  - [ ] exit
+    await page.getByText('להצגת תלוש השכר').click();
 
+    // This should resolve after finish to try to fetch the PDF
+    await networkIdle;
 
-  // TODO:
-  //  - [x] Exit page
-  //  - [x] Remove check password
-  //  - [x] rename check file to match the company and the date
-  //  - [x] send email with the check
-  //  - [x] remove paycheck
-  //  - [ ] set job as successful
+    logger.info('Requested paycheck date selected');
 }
 
-/**
- *
- * @param {Date} date
- * @param {string} folderToDownloadPaycheckTo
- * @param browser
- * @returns {Promise<string>}
- */
-async function downloadPaycheckFor(date, folderToDownloadPaycheckTo, browser) {
-  return await _downloadPaycheckFor({
-    browser,
-    date,
-    folderToDownloadPaycheckTo,
-  });
+async function selectDate({page, year, month}: { page: Page, year: number, month: number }) {
+
+    // Open the date dropdown
+    await page.getByRole('combobox').click();
+
+    const options = await page.getByRole('option').all();
+
+    let optionText: string | undefined;
+
+    for (const option of options) {
+        const optionValue = await option.getAttribute('value');
+
+        if (optionValue && doesValueMatchDate({value: optionValue, year, month})) {
+            optionText = optionValue;
+            break;
+        }
+    }
+
+    if (!optionText) {
+        const date = new Date(year, month);
+        throw new MissingPaycheckError(date)
+    }
+
+    await page.selectOption('combobox', optionText);
 }
 
+function doesValueMatchDate({value, year, month}: {value: string, year: number, month: number}) {
 
-module.exports = {
-  downloadPaycheckFor,
+    const monthString = (month + 1).toString().padStart(2, '0');
+
+    // The option value is the option index and then the month number + year
+    // e.g. 4: 02/2024 for February 2024 paycheck when it's the 5th option (zero based)
+    return value?.endsWith(` ${monthString}/${year}`);
+}
+
+async function downloadPaycheck({page, downloadPath}: { page: Page, downloadPath: string }) {
+    logger.info('Downloading paycheck');
+
+    await page.getByRole('button', {name: 'הורדת תלוש'}).click();
+    await page.getByLabel('ללא הצפנה').check();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', {name: 'הורדת קובץ'}).click();
+
+    const download = await downloadPromise;
+
+    await download.saveAs(downloadPath);
+
+    logger.info('Paycheck downloaded');
 }
