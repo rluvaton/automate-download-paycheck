@@ -92,6 +92,16 @@ async function downloadFromHargal({page, paycheckDate}: { page: Page, paycheckDa
     logger.info('Mail sent successfully');
 }
 
+function getDate() {
+    // The paycheck from prev month
+    const paycheckDate = new Date();
+
+    // The date will now be the last day of the _previous_ month
+    paycheckDate.setDate(0);
+
+    return paycheckDate;
+}
+
 async function run() {
     try {
         await assertAvailable();
@@ -101,10 +111,7 @@ async function run() {
     }
 
     // The paycheck from prev month
-    const paycheckDate = new Date();
-
-    // The date will now be the last day of the _previous_ month
-    paycheckDate.setDate(0);
+    const paycheckDate = getDate();
 
     // TODO - on browser/page close abort with error
     const browser = await chromium.launch({

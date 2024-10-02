@@ -1,4 +1,4 @@
-import {Page} from 'playwright';
+import {Page, Locator} from 'playwright';
 import {baseLogger} from "./logger";
 import * as path from "node:path";
 import {hilan} from "./conf";
@@ -124,7 +124,7 @@ async function selectDate({page, year, month}: { page: Page, year: number, month
         throw new MissingPaycheckError(date)
     }
 
-    await page.selectOption('combobox', optionText);
+    await selectOptionFromCombobox(page.getByRole('combobox'), optionText);
 }
 
 function doesValueMatchDate({value, year, month}: {value: string, year: number, month: number}) {
@@ -150,4 +150,13 @@ async function downloadPaycheck({page, downloadPath}: { page: Page, downloadPath
     await download.saveAs(downloadPath);
 
     logger.info('Paycheck downloaded');
+}
+
+async function selectOptionFromCombobox(combobox: Locator, optionValue: string) {
+    // We are having issues selecting option this way
+    // await page.selectOption('combobox', optionText);
+
+    await combobox.evaluate((element, optionValue) => {
+        (element as HTMLSelectElement).value = optionValue;
+    }, optionValue);
 }
