@@ -91,12 +91,16 @@ async function goToPaycheckDate({page, year, month}: { page: Page, year: number,
         await selectDate({page, year, month});
     }
 
-    const networkIdle = page.waitForLoadState('networkidle');
-
     await page.getByText('להצגת תלוש השכר').click();
 
-    // This should resolve after finish to try to fetch the PDF
-    await networkIdle;
+    // Wait for the PDF to be fetched or 5s timeout
+    try {
+        await page.waitForLoadState('networkidle', {
+            timeout: 5000
+        });
+    } catch {
+
+    }
 
     logger.info('Requested paycheck date selected');
 }
@@ -127,7 +131,7 @@ async function selectDate({page, year, month}: { page: Page, year: number, month
     await selectOptionFromCombobox(page.getByRole('combobox'), optionText);
 }
 
-function doesValueMatchDate({value, year, month}: {value: string, year: number, month: number}) {
+function doesValueMatchDate({value, year, month}: { value: string, year: number, month: number }) {
 
     const monthString = (month + 1).toString().padStart(2, '0');
 
@@ -158,5 +162,8 @@ async function selectOptionFromCombobox(combobox: Locator, optionValue: string) 
 
     await combobox.evaluate((element, optionValue) => {
         (element as HTMLSelectElement).value = optionValue;
+
+        // Dispatch change event so the page will know that the value changed
+        element.dispatchEvent(new Event('change', {bubbles: true}));
     }, optionValue);
 }
